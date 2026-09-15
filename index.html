@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Semester Command Centre · Pro-Rata</title>
+<style>
+:root{--ink:#171717;--muted:#737373;--line:#e8e8e8;--panel:#fafafa;--accent:#111}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:var(--ink);background:#fff}
+.wrap{max-width:1100px;margin:0 auto;padding:32px 20px}.hero{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:22px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted)}h1{font-size:36px;letter-spacing:-.04em;margin:5px 0}h2{margin:0;font-size:20px}
+.sub{color:var(--muted);font-size:14px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}.stat{border:1px solid var(--line);border-radius:16px;padding:15px;background:var(--panel)}.stat b{font-size:27px;display:block}.stat span{font-size:12px;color:var(--muted)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.toolbar>*{height:42px;border:1px solid var(--line);border-radius:11px;background:#fff;padding:0 12px;font:inherit}
+button{cursor:pointer}.primary{background:var(--accent);color:#fff;border-color:var(--accent);height:42px;padding:0 15px;border-radius:11px;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}.course{border:1px solid var(--line);border-radius:17px;padding:16px;cursor:pointer;background:#fff}.course.active{outline:2px solid #111}.course-top{display:flex;justify-content:space-between;gap:10px}.code{font-weight:800;font-size:13px}.name{font-weight:700;font-size:17px;margin-top:2px}.meta{font-size:12px;color:var(--muted);margin-top:7px}.bar{height:8px;background:#e9e9e9;border-radius:99px;overflow:hidden;margin-top:13px}.bar i{display:block;height:100%;background:#111;border-radius:99px}
+.panel{border:1px solid var(--line);border-radius:18px;overflow:hidden}.panelhead{padding:17px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}.task{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}.task:last-child{border-bottom:0}.task.done{opacity:.5}.task.done .taskname{text-decoration:line-through}.task input{width:19px;height:19px}.taskname{font-weight:650}.tasksub{font-size:12px;color:var(--muted);margin-top:3px}.due{font-size:12px;text-align:right;white-space:nowrap}.urgent{font-weight:800}.overdue{font-weight:800}.none{color:var(--muted)}a{color:inherit}.empty{text-align:center;color:var(--muted);padding:28px}
+.modal{margin-top:12px;border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:16px}.form{display:grid;gap:9px}.form input,.form select{height:42px;border:1px solid var(--line);border-radius:10px;padding:0 11px;font:inherit}.actions{display:flex;gap:8px}
+@media(max-width:700px){.hero{display:block}.hero button{margin-top:14px}.stats{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.task{grid-template-columns:auto 1fr}.due{text-align:left;grid-column:2}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="hero"><div><div class="eyebrow">2026 / JUL · PRO-RATA</div><h1>Semester Command Centre</h1><div class="sub">Track submissions, vivas, practicals, exams and separate prorata deadlines.</div></div><button class="primary" onclick="openAdd()">＋ Add task</button></div>
+<div class="stats"><div class="stat"><b id="total">0</b><span>Total tasks</span></div><div class="stat"><b id="done">0</b><span>Completed</span></div><div class="stat"><b id="urgent">0</b><span>Due soon / overdue</span></div><div class="stat"><b id="overall">0%</b><span>Overall progress</span></div></div>
+<div class="toolbar"><select id="moduleFilter" onchange="selected=this.value;render()"><option value="all">All modules</option></select><select id="statusFilter" onchange="render()"><option value="all">All tasks</option><option value="open">Open</option><option value="done">Completed</option></select><input id="search" oninput="render()" placeholder="Search tasks…"></div>
+<div id="courses" class="grid"></div>
+<div class="panel"><div class="panelhead"><div><h2 id="panelTitle">Upcoming & active work</h2><div class="sub" id="panelSub">All modules · sorted by deadline</div></div><b id="count"></b></div><div id="tasks"></div></div>
+<div id="addModal" class="modal" hidden><h2>Add a personal task</h2><form class="form" onsubmit="addTask(event)"><input id="taskName" required placeholder="Task name"><select id="taskCourse"></select><input id="taskDue" type="date"><input id="taskLink" type="url" placeholder="Submission / resource link (optional)"><div class="actions"><button class="primary">Add task</button><button type="button" onclick="closeAdd()">Cancel</button></div></form></div>
+</div>
+<script>
+const courses=[
+{id:'IE1030',name:'Data Communication Networks',note:'Prorata quiz + practical work',web:'https://courseweb.sliit.lk/course/view.php?id=9275',tasks:[
+['Lab Quiz 1 · Pro-rata','Online quiz covering Practical Sessions 1–5 · quiz period 14–20 Sep; exact time announced via CourseWeb','2026-09-20',''],
+['Practical 8','Static Routing · Week 21–27 Sep','', ''],
+['Practical 9','Dynamic Routing · Week 28 Sep–4 Oct','', ''],
+['Practical 10','DHCP · Week 5–11 Oct','', ''],
+['Final examination','Final examination week · check CourseWeb for exact date','', '']]},
+{id:'IT1120',name:'Introduction to Programming',note:'Prorata GitHub labs 01–08',web:'https://courseweb.sliit.lk/course/view.php?id=9362',tasks:[
+['Lab 1 · Prorata GitHub','Submit answers to ProRata repository','','https://github.com/IP-JUNE-2026/ProRata-Lab-01.git'],
+['Lab 2 · Prorata GitHub','Submit answers to ProRata repository','','https://github.com/IP-JUNE-2026/ProRata-Lab-02.git'],
+['Lab 3 · Prorata GitHub','Submit answers to ProRata repository','','https://github.com/IP-JUNE-2026/ProRata-Lab-03.git'],
+['Lab 4 · Prorata GitHub','Submit answers to ProRata repository','','https://github.com/IP-JUNE-2026/ProRata-Lab-04.git'],
+['Lab 5 · Prorata GitHub','Submit answers to ProRata repository','','https://github.com/IP-JUNE-2026/ProRata-Lab-05.git'],
+['Lab 6 · Prorata GitHub','Submit answers to ProRata repository','','https://github.com/IP-JUNE-2026/ProRata-Lab-06.git'],
+['Lab 7 · Prorata GitHub','Submit answers to ProRata repository','','https://github.com/IP-JUNE-2026/ProRata-Lab-07.git'],
+['Lab 8 · Prorata GitHub','Submit answers to ProRata repository','','https://github.com/IP-JUNE-2026/Prorata-Lab-08.git']]},
+{id:'IT1170',name:'Data Structures & Algorithms',note:'Practical work for Pro-rata group',web:'https://courseweb.sliit.lk/course/view.php?id=9367',tasks:[
+['Practical 1 · Pro-rata','Week 2 practical · use the Pro-rata CourseWeb submission/activity','',''],
+['Practical 2 · Pro-rata','Week 3 practical · use the Pro-rata CourseWeb submission/activity','',''],
+['Practical 3 · Pro-rata','Week 4 practical · use the Pro-rata CourseWeb submission/activity','',''],
+['Practical 4 · Pro-rata','Week 5 practical · use the Pro-rata CourseWeb submission/activity','',''],
+['Practical 5 · Pro-rata','Continue the practical sequence on CourseWeb','','']]},
+{id:'IT2120',name:'Probability & Statistics',note:'Compulsory labs for prorata/repeat students',web:'https://courseweb.sliit.lk/course/view.php?id=9370',tasks:[
+['Lab 01','Weekly lab submission · submit within 3 days of your scheduled lab','',''],
+['Lab 02','Weekly lab submission · submit within 3 days of your scheduled lab','',''],
+['Lab 03','Weekly lab submission · submit within 3 days of your scheduled lab','',''],
+['Lab 04','Weekly lab submission · submit within 3 days of your scheduled lab','',''],
+['Lab 05','Weekly lab submission · submit within 3 days of your scheduled lab','',''],
+['Lab 06','Weekly lab submission · submit within 3 days of your scheduled lab','',''],
+['Lab 07','Weekly lab submission · submit within 3 days of your scheduled lab','',''],
+['Lab 08','Weekly lab submission · submit within 3 days of your scheduled lab','',''],
+['Quiz','Computer-based quiz · track the announced date','',''],
+['Final examination','Final exam · 60% of module assessment','','']]},
+{id:'IT2130',name:'Operating Systems & System Administration',note:'Practical sheets + practical test',web:'https://courseweb.sliit.lk/course/view.php?id=9842',tasks:[
+['Practical Sheets 01–06','First practical evaluation · complete and submit','2026-10-10','https://courseweb.sliit.lk/mod/assign/view.php?id=488916'],
+['Practical Viva 01','Viva date will be announced separately; conducted before mid-semester','',''],
+['Practical Sheets 07–11','Second practical evaluation · deadline and viva date TBA; after mid-semester','',''],
+['Practical Viva 02','Viva for the second practical evaluation · date TBA','',''],
+['Practical Test','Prepare answers and submit by the announced deadline; comprehensive viva in mid-October','','']]},
+{id:'IT2140',name:'Database Design & Development',note:'Prorata-specific assignment + lab ZIP deadlines',web:'https://courseweb.sliit.lk/course/view.php?id=9371',tasks:[
+['Assignment Part 01 · Pro-rata','Submission deadline: on or before 18 Sep 2026 · use the assignment instructions/folder in CourseWeb','2026-09-18','https://courseweb.sliit.lk/mod/folder/view.php?id=486613'],
+['Lab Sheets 1–8 · Pro-rata','Zip all lab sheet answers into one ZIP and submit','2026-09-25','https://courseweb.sliit.lk/mod/assign/view.php?id=495117'],
+['Assignment Part 02 · Pro-rata','Submission deadline: on or before 2 Oct 2026 · use the Assignment Part 02 folder in CourseWeb','2026-10-02','https://courseweb.sliit.lk/mod/folder/view.php?id=489839']]},
+{id:'SE1020',name:'Object Oriented Programming',note:'Labs, vivas + prorata project',web:'https://courseweb.sliit.lk/course/view.php?id=9395',tasks:[
+['Lab Sheet 03 answer submission','All WE, WD and Prorata students · upload the required answer to the correct submission link','2026-09-17','https://courseweb.sliit.lk/mod/assign/view.php?id=492838'],
+['Lab Viva 01','Based on Lab Sheet 2 · held during regular lab session, 14–20 Sep','2026-09-20',''],
+['Lab Viva 02','Based on Lab Sheet 4 · held during regular lab session, 21–27 Sep','2026-09-27',''],
+['Prorata project group registration','Maximum 6 per group, or complete individually; register using the form','','https://forms.cloud.microsoft/r/DUDkycBtTd'],
+['Prorata project','Select a topic from the prorata topic list and complete the required workload','',''],
+['Final project viva','Track the final project viva announcement on CourseWeb','','']]},
+{id:'SE2030',name:'Software Engineering',note:'Group submissions + individual vivas',web:'https://courseweb.sliit.lk/course/view.php?id=9400',tasks:[
+['Project Proposal Report','One PDF per group · submitted on or before 7 Aug 2026','2026-08-07','https://courseweb.sliit.lk/mod/assign/view.php?id=489832'],
+['Lab 01 · Prorata','Submit before the next lab session; common CourseWeb deadline display should be ignored','','https://courseweb.sliit.lk/mod/assign/view.php?id=489826'],
+['Lab 02 · Prorata','Group submission; Lab 02 viva during Week 05 regular lab session','','https://courseweb.sliit.lk/mod/assign/view.php?id=489834'],
+['Lab 03 · Prorata','Submit before Week 06 lab; individual viva during Week 06','','https://courseweb.sliit.lk/mod/assign/view.php?id=490075'],
+['Lab 04 · Prorata','Submit before the next lab session; individual viva during Week 07','','https://courseweb.sliit.lk/mod/assign/view.php?id=490076'],
+['Project Progress Evaluation','Compulsory during Week 10 regular lab session · system demonstration only','',''],
+['Design Document Submission','Week 11 project deliverable; check your batch-specific CourseWeb submission link','2026-09-27',''],
+['Final group project','Track remaining implementation, report and final evaluation','','']]}
+];
+let custom=JSON.parse(localStorage.getItem('prorata_custom')||'[]');
+let state=JSON.parse(localStorage.getItem('prorata_state')||'{}');
+let selected='all';
+function key(c,i){return c+'::'+i}
+function done(c,i){return !!state[key(c,i)]}
+function days(d){if(!d)return null;let a=new Date();a.setHours(0,0,0,0);return Math.ceil((new Date(d+'T00:00:00')-a)/86400000)}
+function due(d){if(!d)return 'No fixed date';let n=days(d);if(n<0)return 'Overdue · '+d;if(n===0)return 'Due today';if(n===1)return 'Due tomorrow';return 'Due '+new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}
+function allTasks(){return courses.flatMap(c=>c.tasks.map((t,i)=>({c:c.id,i,t}))).concat(custom.map((x,i)=>({c:'PERSONAL',i,t:[x.name,x.course+' · personal task',x.due,x.link]})))}
+function render(){
+const all=allTasks(),d=all.filter(x=>done(x.c,x.i)).length,u=all.filter(x=>x.t[2]&&days(x.t[2])<=7&&!done(x.c,x.i)).length;
+document.getElementById('total').textContent=all.length;document.getElementById('done').textContent=d;document.getElementById('urgent').textContent=u;document.getElementById('overall').textContent=Math.round(d/all.length*100)+'%';
+const mf=document.getElementById('moduleFilter');if(mf.options.length===1){courses.forEach(c=>mf.add(new Option(c.id+' · '+c.name,c.id)));mf.add(new Option('PERSONAL · Added tasks','PERSONAL'));}
+document.getElementById('courses').innerHTML=courses.map(c=>{let dc=c.tasks.filter((_,i)=>done(c.id,i)).length,p=Math.round(dc/c.tasks.length*100);return `<div class="course ${selected===c.id?'active':''}" onclick="selected='${c.id}';document.getElementById('moduleFilter').value='${c.id}';render()"><div class="course-top"><div><div class="code">${c.id}</div><div class="name">${c.name}</div></div><b>${p}%</b></div><div class="meta">${c.note} · <a href="${c.web}" target="_blank" onclick="event.stopPropagation()">CourseWeb ↗</a></div><div class="bar"><i style="width:${p}%"></i></div><div class="meta">${dc}/${c.tasks.length} tracked items completed</div></div>`}).join('');
+let q=document.getElementById('search').value.toLowerCase(),st=document.getElementById('statusFilter').value;
+let rows=all.filter(x=>selected==='all'||x.c===selected).filter(x=>(x.t[0]+' '+x.t[1]).toLowerCase().includes(q)).filter(x=>st==='all'||(st==='done'?done(x.c,x.i):!done(x.c,x.i))).sort((a,b)=>(a.t[2]||'9999').localeCompare(b.t[2]||'9999'));
+const selectedCourse=courses.find(c=>c.id===selected);
+const isPersonal=selected==='PERSONAL';
+document.getElementById('panelTitle').textContent=selected==='all'?'Upcoming & active work':isPersonal?'Personal tasks':selectedCourse.name;
+document.getElementById('panelSub').textContent=selected==='all'?'All modules · sorted by deadline':isPersonal?'Tasks you added yourself': 'Prorata tracker · '+selectedCourse.note;
+document.getElementById('count').textContent=rows.length+' item'+(rows.length===1?'':'s');
+document.getElementById('tasks').innerHTML=rows.length?rows.map(x=>{let n=x.t[2]?days(x.t[2]):null;return `<div class="task ${done(x.c,x.i)?'done':''}"><input type="checkbox" ${done(x.c,x.i)?'checked':''} onchange="toggle('${x.c}',${x.i},this.checked)"><div><div class="taskname">${x.t[0]}</div><div class="tasksub">${x.c} · ${x.t[1]} ${x.t[3]?`· <a href="${x.t[3]}" target="_blank">Open submission / resource ↗</a>`:''}</div></div><div class="due ${n!==null&&n<0?'overdue':n!==null&&n<=3?'urgent':!x.t[2]?'none':''}">${due(x.t[2])}</div></div>`}).join(''):'<div class="empty">No tasks match this filter.</div>';
+}
+function toggle(c,i,v){state[key(c,i)]=v;localStorage.setItem('prorata_state',JSON.stringify(state));render()}
+function openAdd(){document.getElementById('addModal').hidden=false;document.getElementById('taskCourse').innerHTML=courses.map(c=>`<option>${c.id}</option>`).join('')}
+function closeAdd(){document.getElementById('addModal').hidden=true}
+function addTask(e){e.preventDefault();custom.push({name:taskName.value.trim(),course:taskCourse.value,due:taskDue.value,link:taskLink.value.trim()});localStorage.setItem('prorata_custom',JSON.stringify(custom));e.target.reset();closeAdd();render();}
+render();
+</script>
+</body>
+</html>
